@@ -10,7 +10,6 @@ import dotenv
 dotenv.load_dotenv(dotenv.find_dotenv())
 url = os.getenv('URL')
 apikey = os.getenv('API')
-user = []
 authenticator = IAMAuthenticator(apikey)
 tts = TextToSpeechV1(authenticator=authenticator)
 tts.set_service_url(url)
@@ -22,20 +21,22 @@ async def on_ready():
 
 @client.event
 async def on_message(message):
-    global user
     await client.process_commands(message)
     if message.author == client.user:
         return
     print(message.author.name,"#",message.author.discriminator,"-",message.content)
     voice = message.guild.voice_client
-    if (int(message.author.id) in user and message.author.voice):
+    usuario = open('identificacao.txt','r')
+    var = usuario.read()
+    identificador = var.split()
+    if str(message.author.id) in identificador and message.author.voice:
         channel = message.author.voice.channel
         if voice and voice.is_connected():
             await voice.move_to(channel)
         else:
             voice = await channel.connect()
         with open('./speech.mp3','wb') as audio_file:
-            res = tts.synthesize(message.content, accept='audio/mp3',voice= 'es-ES_EnriqueVoice' ).get_result()
+            res = tts.synthesize(message.content, accept='audio/mp3',voice= 'pt-BR_IsabelaV3Voice' ).get_result()
             audio_file.write(res.content)
         source = FFmpegPCMAudio('speech.mp3')
         voice.play(source)
@@ -46,12 +47,14 @@ async def novoid(ctx):
     await ctx.channel.send('Digite o ID da pessoa que quer usar o bot:')
     usuario_id = await client.wait_for('message')
     if el_hombre == usuario_id.author.id:
-        user.append(int(usuario_id.content))
+        with open('identificacao.txt','a') as id:
+            id.write(str(usuario_id.author.id))
         await ctx.channel.send("ID inserido com sucesso!")
 
 @client.command()
 async def usuarios(ctx):
-    for i in range (len(user)):
-        await ctx.channel.send(f"<@{user[i]}>")
+    usuario = open('identificacao.txt','r')
+    for identificador in usuario:
+        await ctx.channel.send(f"<@{identificador}>")
 
 client.run(os.getenv('TOKEN'))
